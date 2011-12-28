@@ -63,7 +63,8 @@ Overview:
 * mandatory and optional arguments/options
 * default values
 * optional callback functions
-* can define custom tags and coercion rules
+* custom tags and coercion rules
+* automatic `--help`
 
 Option syntax details:
 
