@@ -1,5 +1,5 @@
 options = require('../lib/dreamopt') [
-  "Usage: myscript [options] source.mess [destination.css]"
+  "Usage: myscript [options] source [destination]"
 
   "source           Source file to compile into css #required"
   "destination      Destination file (defaults to source file with .css extension)", (value, options) ->

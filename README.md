@@ -4,7 +4,7 @@ Command-Line Parser With Readable Syntax From Your Sweetest Dreams
 Ever wrote crap code to deal with parsing command-line options? No more. Here's how it should look like (in CoffeeScript):
 
     options = require('dreamopt') [
-      "Usage: myscript [options] source.mess [destination.css]"
+      "Usage: myscript [options] source [destination]"
 
       "source           Source file to compile into css #required"
       "destination      Destination file (defaults to source file with .css extension)", (value, options) ->
@@ -29,7 +29,7 @@ Ever wrote crap code to deal with parsing command-line options? No more. Here's 
 
 Try to run it as `node examples/foo.js`:
 
-    Error: Missing required argument #1: source.mess
+    Error: Missing required argument #1: source
 
 Now run it as `node examples/foo.js myfile.mess`:
 
