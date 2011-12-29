@@ -2,7 +2,7 @@
   "author": "Andrey Tarantsov <andreyvit@me.com>",
   "name": "dreamopt",
   "description": "Command-line parser with readable syntax from your sweetest dreams",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "homepage": "https://github.com/andreyvit/dreamopt.js",
   "repository": {
     "type": "git",
