@@ -1,8 +1,11 @@
+wordwrap = require 'wordwrap'
+
 USAGE    = /^Usage:/
 HEADER   = /^[^-].*:$/
-OPTION   = /^-/
-COMMAND  = ///^  (\w+)  (?: \s{2,} (\S.*) )  $///
-ARGUMENT = /// \s\s | ^\S+$ ///
+OPTION   = /^\s+-/
+COMMAND  = ///^  \s+  (\w+)  (?: \s{2,} (\S.*) )  $///
+ARGUMENT = /// ^ \s+ .* \s\s | ^ \s+ \S+ $ ///
+TEXT     = /^\S/
 
 # if only JavaScript had a sane split(), we'd skip some of these
 OPTION_DESC         = ///^ (.*?)  \s{2,}  (.*) $///
@@ -37,13 +40,30 @@ DefaultHandlers =
     throw new Error("Invalid flag value #{JSON.stringify(value)} for option #{optionName}")
 
 
-alignment = 20
+alignment   = 24
+indent      = "  "
+separator   = "  "
+width       = 100
+
+wrapText        = require('wordwrap')(width)
+
 
 formatUsageString = (left, right) ->
-  if left.length < alignment
-    padding = new Array(alignment - left.length + 1).join(' ')
+  overhead = indent.length + separator.length
+
+  if left.length < alignment - overhead
+    padding = new Array(alignment - overhead - left.length + 1).join(' ')
   else
     padding = ''
+
+  actualAlignment   = overhead + left.length + padding.length
+  descriptionWidth  = width - actualAlignment
+  wrappedLineIndent = new Array(actualAlignment + 1).join(' ')
+
+  [firstLine, otherLines...] = wordwrap(descriptionWidth)(right).trim().split('\n')
+  right = [firstLine].concat(otherLines.map (line) -> wrappedLineIndent + line).join("\n")
+  right += "\n" if otherLines.length
+
   return "  #{left}#{padding}  #{right}"
 
 
@@ -172,7 +192,7 @@ class Syntax
         @usageFound = yes
 
       else if spec.match(OPTION)
-        @options.push (option = Option.parse(spec))
+        @options.push (option = Option.parse(spec.trim()))
 
         @shortOptions[option.shortOpt.slice(1)] = option  if option.shortOpt
         @longOptions[option.longOpt.slice(2)]   = option  if option.longOpt
@@ -184,7 +204,7 @@ class Syntax
         @usage.push option.toUsageString()
 
       else if !gotArray() and spec.match(ARGUMENT)
-        @arguments.push (option = Option.parse(spec))
+        @arguments.push (option = Option.parse(spec.trim()))
 
         if gotFunction()
           option.func = specs.shift()
@@ -204,6 +224,9 @@ class Syntax
 
         @ensureHeaderExists 'commands'
         @usage.push command.toUsageString()
+
+      else if spec.match TEXT
+        @usage.push "\n" + wrapText(spec.trim())
 
       else
         throw new Error("String spec invalid: #{JSON.stringify(spec)}")
@@ -334,7 +357,7 @@ class Syntax
 
 
 Option.parse = (spec) ->
-  isOption = spec.match(OPTION)
+  isOption = (' ' + spec).match(OPTION)
 
   [_, options, desc]     = spec.match(OPTION_DESC)     || [undefined, spec, ""]
   if isOption
@@ -389,7 +412,7 @@ parse = (specs, handlers, argv) ->
 
   syntax = new Syntax(handlers, specs)
   unless syntax.longOptions.help
-    syntax.add ["-h, --help  Display this usage information", (v, o, s) -> handleUsage(handlers.printUsage ? printUsage, v, o, s)]
+    syntax.add ["  -h, --help  Display this usage information", (v, o, s) -> handleUsage(handlers.printUsage ? printUsage, v, o, s)]
 
   syntax.parse(argv)
 

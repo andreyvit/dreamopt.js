@@ -58,9 +58,9 @@ describe 'dreamopt', ->
   describe "with a syntax as simple as -a/--AAA, -b/--BBB COUNT, -c/--ccc", ->
 
     syntax = [
-        "-a, --AAA  Simple option"
-        "-b, --BBB COUNT  Option with value"
-        "-c, --[no-]ccc  Flag option"
+        "  -a, --AAA  Simple option"
+        "  -b, --BBB COUNT  Option with value"
+        "  -c, --[no-]ccc  Flag option"
     ]
 
     o syntax, [''], {}
@@ -101,9 +101,9 @@ describe 'dreamopt', ->
   describe "with a syntax that has two positional arguments and one option (-v/--verbose)", ->
 
     syntax = [
-        "-v, --verbose  Be verbose"
-        "first  First positional arg"
-        "second  Second positional arg"
+        "  -v, --verbose  Be verbose"
+        "  first  First positional arg"
+        "  second  Second positional arg"
     ]
 
     o syntax, [],                      {}
@@ -118,8 +118,8 @@ describe 'dreamopt', ->
   describe "with a syntax that has two positional arguments, both of which have default values", ->
 
     syntax = [
-        "first  First positional arg (default: 10)"
-        "second  Second positional arg (default: 20)"
+        "  first  First positional arg (default: 10)"
+        "  second  Second positional arg (default: 20)"
     ]
 
     o syntax, [],                      { argv: [10, 20], first: 10, second: 20 }
@@ -130,8 +130,8 @@ describe 'dreamopt', ->
   describe "with a syntax that has two positional arguments, one of which is required", ->
 
     syntax = [
-        "first  First positional arg  #required"
-        "second  Second positional arg (default: 20)"
+        "  first  First positional arg  #required"
+        "  second  Second positional arg (default: 20)"
     ]
 
     oo syntax, [],                     /required/
@@ -142,8 +142,8 @@ describe 'dreamopt', ->
   describe "with a syntax that has a required option", ->
 
     syntax = [
-        "--src FILE  Source file  #required"
-        "first  First positional arg"
+        "  --src FILE  Source file  #required"
+        "  first  First positional arg"
     ]
 
     oo syntax, [],                     /required/

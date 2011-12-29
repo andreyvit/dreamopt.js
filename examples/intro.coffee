@@ -1,21 +1,21 @@
 options = require('../lib/dreamopt') [
   "Usage: myscript [options] source [destination]"
 
-  "source           Source file to compile into css #required"
-  "destination      Destination file (defaults to source file with .css extension)", (value, options) ->
+  "  source           Source file to compile into css #required"
+  "  destination      Destination file (defaults to source file with .css extension)", (value, options) ->
     if !value
       return options.source.replace(/\.mess/, '') + '.css'
 
   "Processing options:"
-  "-n, --dry-run    Don't write anything to disk"
-  "-m, --mode MODE  Set execution mode: easy, medium, hard (defaults to medium)"
+  "  -n, --dry-run    Don't write anything to disk"
+  "  -m, --mode MODE  Set execution mode: easy, medium, hard (defaults to medium)"
 
   "Connection options:"
-  "-p, --port PORT  Port to connect to (default: 80)"
-  "-h, --host HOST  Host to connect to (default is localhost)"
+  "  -p, --port PORT  Port to connect to (default: 80)"
+  "  -h, --host HOST  Host to connect to (default is localhost)"
 
   "Getting useful information:"
-  "--reporters      Print a list of reporters and exit", ->
+  "  --reporters      Print a list of reporters and exit", ->
     console.log "Reporters: foo, bar, boz"
     process.exit 0
 ]

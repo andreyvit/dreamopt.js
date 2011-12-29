@@ -6,21 +6,21 @@ Ever wrote crap code to deal with parsing command-line options? No more. Here's 
     options = require('dreamopt') [
       "Usage: myscript [options] source [destination]"
 
-      "source           Source file to compile into css #required"
-      "destination      Destination file (defaults to source file with .css extension)", (value, options) ->
+      "  source           Source file to compile into css #required"
+      "  destination      Destination file (defaults to source file with .css extension)", (value, options) ->
         if !value
           return options.source.replace(/\.mess/, '') + '.css'
 
       "Processing options:"
-      "-n, --dry-run    Don't write anything to disk"
-      "-m, --mode MODE  Set execution mode: easy, medium, hard (defaults to medium)"
+      "  -n, --dry-run    Don't write anything to disk"
+      "  -m, --mode MODE  Set execution mode: easy, medium, hard (defaults to medium)"
 
       "Connection options:"
-      "-p, --port PORT  Port to connect to (default: 80)"
-      "-h, --host HOST  Host to connect to (default is localhost)"
+      "  -p, --port PORT  Port to connect to (default: 80)"
+      "  -h, --host HOST  Host to connect to (default is localhost)"
 
       "Getting useful information:"
-      "--reporters      Print a list of reporters and exit", ->
+      "  --reporters      Print a list of reporters and exit", ->
         console.log "Reporters: foo, bar, boz"
         process.exit 0
     ]
@@ -99,10 +99,12 @@ Each line of `spec` can be:
 
 * `Usage: blah blag` — a banner, it is displayed at the very top of the usage info
 * `Something:` — a header, it is displayed verbatim with appropriate spacing; if you don't define any headers, dreamopt will add the default ones as needed (“Arguments:” and “Options:”)
-* `-s, --long VALUE  Description #tag1 #tag2(val2)` — option definition; description and tags are separated from the option itself by at least two spaces; tags must be in the end and may have optional values
-* `arg VALUE  Description #tag1 #tag2` — positional argument definition
+* `-s, --long VALUE  Description #tag1 #tag2(val2)` — option definition; must start with at least one space; if description or tags are specified, they must be separated from the option itself by at least two spaces; tags must be in the end and may have optional values
+* `arg  Description #tag1 #tag2` — positional argument definition, same format as options
 * after an option or an argument, you can include a function to be invoked when the option/argument is encountered
 * `command  Description` followed by an array — subcommand definition; these are not functional yet, but should be parsed properly
+
+Any other lines that don't start with whitespace are output verbatim, as a paragraph of text. (Lines that start with whitespace must conform to option, argument or subcommand syntax.)
 
 
 Coercion, validation and custom tags
