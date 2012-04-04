@@ -142,6 +142,7 @@ Magic tags
 * `#required` marks a required option or argument
 * `#var(fieldName)` overrides the options field for this option (i.e. the value is stored into `options.fieldName`)
 * `#default(value)` specifies a default value
+* `#list` marks an option that may be used multiple times; the final value is a JavaScript array
 * `#fancydefault` forces the callback function associated with the current option to be called even when an argument is not provided and no default is set; in this case, the original value will be `null` and your function is expected to return a better one
 * `#delayfunc` delays invocation of the callback function until all other options and arguments are processed; this is useful for options like `--help` or `--print-reporters`, when you want all normal options to be handled and validated before the callback is invoked; the return value of such callback functions is ignored
 

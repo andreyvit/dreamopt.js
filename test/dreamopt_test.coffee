@@ -152,3 +152,16 @@ describe 'dreamopt', ->
     o syntax, ['--src', 'xxx'],        { src: 'xxx' }
     o syntax, ['--src', 'xxx', 'zzz'], { src: 'xxx', first: 'zzz', argv: ['zzz'] }
     o syntax, ['zzz', '--src', 'xxx'], { src: 'xxx', first: 'zzz', argv: ['zzz'] }
+
+
+  describe "with a syntax that has a list option", ->
+
+    syntax = [
+        "  --src FILE  Source file  #list"
+    ]
+
+    o syntax, [],                                 { src: [], argv: [] }
+    o syntax, ['--src', 'xxx'],                   { src: ['xxx'], argv: [] }
+    o syntax, ['--src', 'xxx', '--src', 'yyy'],   { src: ['xxx', 'yyy'], argv: [] }
+
+setTimeout (->), 2000

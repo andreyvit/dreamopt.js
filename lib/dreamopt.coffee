@@ -270,6 +270,15 @@ class Syntax
               throw new Error("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
       return option.coerce(value, result, this)
 
+    assignValue = (result, option, value) =>
+      if option.tags.list
+        if not result.hasOwnProperty(option.var)
+          result[option.var] = []
+        if value?
+          result[option.var].push(value)
+      else
+        result[option.var] = value
+
     while arg = argv.shift()
       if arg is '--'
         while arg = argv.shift()
@@ -277,13 +286,13 @@ class Syntax
       else if arg is '-'
         positional.push arg
       else if arg.match(/^--no-/) && (option = @longOptions[arg.slice(5)]) && option.tags.flag
-        result[option.var] = false
+        assignValue result, option, false
       else if $ = arg.match(///^  --  ([^=]+)  (?: = (.*) )?  $///)
         [_, name, value] = $
         if option = @longOptions[name]
           value = processOption(result, arg, option, value)
           value = executeHook(option, value)
-          result[option.var] = value
+          assignValue result, option, value
         else
           throw new Error("Unknown long option: #{arg}")
       else if arg.match /^-/
@@ -300,7 +309,7 @@ class Syntax
               value = undefined
             value = processOption(result, arg, option, value)
             value = executeHook(option, value)
-            result[option.var] = value
+            assignValue result, option, value
           else
             if arg == "-#{subarg}"
               throw new Error("Unknown short option #{arg}")
@@ -313,13 +322,13 @@ class Syntax
       if !result.hasOwnProperty(option.var)
         if option.tags.required
           throw new Error("Missing required option: #{option.leftUsageComponent()}")
-        if option.defaultValue? or option.tags.fancydefault
+        if option.defaultValue? or option.tags.fancydefault or option.tags.list
           if option.defaultValue?
             value = option.coerce(option.defaultValue, result, this)
           else
             value = null
           value = executeHook(option, value)
-          result[option.var] = value
+          assignValue result, option, value
 
     for arg, index in positional
       if option = @arguments[index]
@@ -327,7 +336,7 @@ class Syntax
         value = executeHook(option, value)
         positional[index] = value
         if option.var
-          result[option.var] = value
+          assignValue result, option, value
 
     for option, index in @arguments
       if index >= positional.length
@@ -341,7 +350,7 @@ class Syntax
           value = executeHook(option, value)
 
           if option.var
-            result[option.var] = value
+            assignValue result, option, value
 
           if index == positional.length
             positional.push value
