@@ -285,11 +285,11 @@ class Syntax
           positional.push arg
       else if arg is '-'
         positional.push arg
-      else if arg.match(/^--no-/) && (option = @longOptions[arg.slice(5)]) && option.tags.flag
+      else if arg.match(/^--no-/) && (option = @lookupLongOption(arg.slice(5), result)) && option.tags.flag
         assignValue result, option, false
       else if $ = arg.match(///^  --  ([^=]+)  (?: = (.*) )?  $///)
         [_, name, value] = $
-        if option = @longOptions[name]
+        if option = @lookupLongOption(name, result)
           value = processOption(result, arg, option, value)
           value = executeHook(option, value)
           assignValue result, option, value
@@ -301,7 +301,7 @@ class Syntax
           subarg    = remainder[0]
           remainder = remainder.slice(1)
 
-          if option = @shortOptions[subarg]
+          if option = @lookupShortOption(subarg, result)
             if remainder && option.metavars.length > 0
               value = remainder
               remainder = ''
@@ -363,6 +363,24 @@ class Syntax
       func(value, result, this, option)
 
     return result
+
+  lookupLongOption: (name, result) ->
+    unless @longOptions.hasOwnProperty(name)
+      @handlers.resolveLongOption?(name, result, this)
+
+    if @longOptions.hasOwnProperty(name)
+      @longOptions[name]
+    else
+      null
+
+  lookupShortOption: (name, result) ->
+    unless @shortOptions.hasOwnProperty(name)
+      @handlers.resolveShortOption?(name, result, this)
+
+    if @shortOptions.hasOwnProperty(name)
+      @shortOptions[name]
+    else
+      null
 
 
 Option.parse = (spec) ->
