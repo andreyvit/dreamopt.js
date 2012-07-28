@@ -64,7 +64,7 @@ oo = (syntax, argv, errorRegexp) ->
     _err = null
     before ->
       try
-        _actual = dreamopt(syntax, argv: argv)
+        _actual = dreamopt(syntax, argv: argv, error: (e) -> throw e)
       catch e
         _err = e
 
@@ -82,7 +82,7 @@ ooo = (syntax, expectedUsage, argv=[]) ->
         throw new Error("bail out of captureUsage")
 
       try
-        dreamopt syntax, argv: argv.concat(['--help']), help: captureUsage
+        dreamopt syntax, argv: argv.concat(['--help']), help: captureUsage, error: (e) -> throw e
       catch e
         throw e unless e.message is "bail out of captureUsage"
 

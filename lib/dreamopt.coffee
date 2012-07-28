@@ -50,7 +50,10 @@ OPTION_DESC_DEFAULT = ///  \(  (?: default: | default\s+is | defaults\s+to )  \s
 SUBSUBSUB = ['command', 'subcommand', 'subsubcommand', 'subsubsubcommand']
 
 
-class CliError extends Error
+createError = (message) ->
+  e = new Error(message)
+  e.isCommandLineError = yes
+  return e
 
 
 DefaultHandlers =
@@ -64,7 +67,7 @@ DefaultHandlers =
   int: (value) ->
     return value unless typeof value is 'string'
     if isNaN(parseInt(value, 10))
-      throw new CliError("Integer value required: #{value}")
+      throw createError("Integer value required: #{value}")
     return parseInt(value, 10)
 
   flag: (value, options, optionName, tagValue) ->
@@ -376,13 +379,13 @@ class Syntax
         when 1
           value ?= argv.shift()
           if typeof value is 'undefined'
-            throw new CliError("Option #{arg} requires an argument: #{option.leftUsageComponent()}")
+            throw createError("Option #{arg} requires an argument: #{option.leftUsageComponent()}")
         else
           value = []
           for metavar, index in option.metavars
             value.push (subvalue = argv.shift())
             if typeof subvalue is 'undefined'
-              throw new CliError("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
+              throw createError("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
       return option.coerce(value, result, syntax)
 
     assignValue = (result, option, value) =>
@@ -409,7 +412,7 @@ class Syntax
           value = executeHook(option, value)
           assignValue result, option, value
         else
-          throw new CliError("Unknown long option: #{arg}")
+          throw createError("Unknown long option: #{arg}")
       else if arg.match /^-/
         remainder = arg.slice(1)
         while remainder
@@ -427,9 +430,9 @@ class Syntax
             assignValue result, option, value
           else
             if arg == "-#{subarg}"
-              throw new CliError("Unknown short option #{arg}")
+              throw createError("Unknown short option #{arg}")
             else
-              throw new CliError("Unknown short option -#{subarg} in #{arg}")
+              throw createError("Unknown short option -#{subarg} in #{arg}")
 
       else if (positional.length is 0) and (command = syntax.lookupCommand(arg, result))
         commands.push command
@@ -446,7 +449,7 @@ class Syntax
     # required command
 
     if syntax.commandsOrder.length > 0
-      throw new CliError("No #{SUBSUBSUB[syntax.nestingLevel]} specified")
+      throw createError("No #{SUBSUBSUB[syntax.nestingLevel]} specified")
 
 
     # required, default and other special options
@@ -454,7 +457,7 @@ class Syntax
     for option in syntax.allOptions()
       if !result.hasOwnProperty(option.var)
         if option.tags.required
-          throw new CliError("Missing required option: #{option.leftUsageComponent()}")
+          throw createError("Missing required option: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault or option.tags.list
           if option.defaultValue?
             value = option.coerce(option.defaultValue, result, syntax)
@@ -479,7 +482,7 @@ class Syntax
     for option, index in allArguments
       if index >= positional.length
         if option.tags.required
-          throw new CliError("Missing required argument \##{index + 1}: #{option.leftUsageComponent()}")
+          throw createError("Missing required argument \##{index + 1}: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault
           if option.defaultValue?
             value = option.coerce(option.defaultValue, result, syntax)
@@ -612,7 +615,7 @@ parse = (specs, options={}) ->
   try
     syntax.parse(options.argv, options)
   catch e
-    if e instanceof CliError
+    if e.isCommandLineError
       options.error(e)
     else
       throw e
