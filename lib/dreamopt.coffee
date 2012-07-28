@@ -272,7 +272,7 @@ class Syntax
     @commands  = {}
     @commandsOrder = []
 
-    @nestingLevel = (if @parent then @parent.commandNestingLevel + 1 else 0)
+    @nestingLevel = (if @parent then @parent.nestingLevel + 1 else 0)
 
     @shortOptions = {}
     @longOptions  = {}
