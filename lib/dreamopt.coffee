@@ -449,7 +449,10 @@ class Syntax
     # required command
 
     if syntax.commandsOrder.length > 0
-      throw createError("No #{SUBSUBSUB[syntax.nestingLevel]} specified")
+      if positional.length is 0
+        throw createError("No #{SUBSUBSUB[syntax.nestingLevel]} specified")
+      else
+        throw createError("Unknown #{SUBSUBSUB[syntax.nestingLevel]} '#{positional[0]}'")
 
 
     # required, default and other special options
