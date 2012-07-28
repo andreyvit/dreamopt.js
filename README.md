@@ -95,6 +95,7 @@ The following options can be specified:
 * `options.customTags` is a hash with custom tag handlers
 * `options.error(err)` is a function that handles syntax error, the default one prints `err.message` and exits
 * `options.help(usage)` is a function that handles `--help`, the default one prints `usage` and exits
+* `options.loadCommandSyntax(command)` is a function that returns the subcommand syntax for the given command
 
 
 Specification format
@@ -104,12 +105,106 @@ Each line of `spec` can be:
 
 * `Usage: blah blag` — a banner, it is displayed at the very top of the usage info
 * `Something:` — a header, it is displayed verbatim with appropriate spacing; if you don't define any headers, dreamopt will add the default ones as needed (“Arguments:” and “Options:”)
-* `-s, --long VALUE  Description #tag1 #tag2(val2)` — option definition; must start with at least one space; if description or tags are specified, they must be separated from the option itself by at least two spaces; tags must be in the end and may have optional values
-* `arg  Description #tag1 #tag2` — positional argument definition, same format as options
+* `-s, --long <value>  Description #tag1 #tag2(val2)` — option definition; must start with at least one space; if description or tags are specified, they must be separated from the option itself by at least two spaces; tags must be in the end and may have optional values
+* `-s, --long VALUE  Description #tag1 #tag2(val2)` — can use `VALUE` instead of `<value>`
+* `<arg>  Description #tag1 #tag2` — positional argument definition, same format as options
+* `ARG  Description #tag1 #tag2` — can use `ARG` instead of `<arg>`
 * after an option or an argument, you can include a function to be invoked when the option/argument is encountered
-* `command  Description` followed by an array — subcommand definition; these are not functional yet, but should be parsed properly
+* `command  Description` followed by a handler function (optional) and an array (required unless you provide `options.loadCommandSyntax`) — subcommand definition
 
 Any other lines that don't start with whitespace are output verbatim, as a paragraph of text. (Lines that start with whitespace must conform to option, argument or subcommand syntax.)
+
+
+Commands
+--------
+
+Syntax:
+
+    options = require('dreamopt') [
+      "Commands:"
+      "  init             Create a new repository in the current folder", []
+      "  commit           Commit the staged changes", []
+
+      "Common options:"
+      "  -v, --verbose    Print tons of useless info"
+    ]
+
+    switch options.command
+      when 'init'
+        ...
+      when 'commit'
+        ...
+
+You can specify a function to run for each command:
+
+    doInit = (options) ->
+      ...
+
+    doCommit = (options) ->
+      ...
+
+    options = require('dreamopt') [
+      "Commands:"
+      "  init             Create a new repository in the current folder", [], doInit
+      "  commit           Commit the staged changes", [], doCommit
+    ]
+
+Command-specific options and help:
+
+    INIT_SYNTAX = [
+      "Create a new repository in the current folder."
+
+      "  -b, --bare     Create a bare repository"
+    ]
+
+    COMMIT_SYNTAX = [
+      "Commit the staged changes."
+
+      "Usage: git commit [options] [<file>...]"
+
+      "  -a, --all      Auto-add all changes"
+      "<file>           The file to commit #list"
+    ]
+
+    options = require('dreamopt') [
+      "Commands:"
+      "  init", doInit, INIT_SYNTAX
+      "  commit", doCommit, COMMIT_SYNTAX
+
+      "Common options:"
+      "  -v, --verbose    Print tons of useless info"
+    ]
+
+Modularizing your code:
+
+    # main.coffee:
+    options = require('dreamopt') [
+      "Commands:
+      "  init"
+      "  commit"
+
+      "Common options:"
+      "  -v, --verbose    Print tons of useless info"
+    ], {
+      loadCommandSyntax: (command) -> require("./commands/#{command}").usage
+    }
+
+    require("./commands/#{options.command}").run(options)
+
+    # commands/commit.coffee:
+    exports.usage = [
+      "Commit the staged changes."
+
+      "Usage: git commit [options] [<file>...]"
+
+      "  -a, --all      Auto-add all changes"
+      "<file>           The file to commit #list"
+    ]
+
+    exports.run = (options) ->
+      ...
+
+Commands can be nested, which results in `options.command`, `options.subcommand`, `options.subsubcommand` etc; loadCommandSyntax is called with a space-separated command name for nested commands.
 
 
 Coercion, validation and custom tags
