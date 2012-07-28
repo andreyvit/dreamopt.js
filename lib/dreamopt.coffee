@@ -3,7 +3,7 @@ wordwrap = require 'wordwrap'
 USAGE    = /^Usage:/
 HEADER   = /^[^-].*:$/
 OPTION   = /^\s+-/
-COMMAND  = ///^  \s+  (\w+)  (?: \s{2,} (\S.*) )  $///
+COMMAND  = ///^  \s+  ([\w.-]+)  (?: \s{2,} (.*) )?  $///
 TEXT     = /^\S/
 
 ARGUMENT = ///
@@ -45,6 +45,9 @@ OPTION_BOOL         = ///^ --\[no-\](.*) $///
 OPTION_DESC_TAG     = ///^ (.*) \#(\w+) (?: \(  ([^()]*)  \) )? \s* $///
 DUMMY               = /// \# ///   # make Sublime Text syntax highlighting happy
 OPTION_DESC_DEFAULT = ///  \(  (?: default: | default\s+is | defaults\s+to )  \s+  ([^()]+)  \)  ///i
+
+# more readable than a func that would compute these names
+SUBSUBSUB = ['command', 'subcommand', 'subsubcommand', 'subsubsubcommand']
 
 
 class CliError extends Error
@@ -181,49 +184,98 @@ class Option
 class Command
   constructor: (@name, @desc, @syntax) ->
     @func = null
+    @desc or= @syntax.usage.firstPreambleLine()
 
   leftUsageComponent: -> @name
 
   toUsageString: -> formatUsageString(@leftUsageComponent(), @desc)
 
 
+class UsageSection
+
+  constructor: (@type, @header) ->
+    @lines = []
+
+  toUsageString: ->
+    (if @header then "#{@header}\n" else '') + ("#{line}\n" for line in @lines).join('')
+
+
+class Usage
+
+  constructor: ->
+    @sections = []
+    @lastSection = null
+
+    @implicitHeaders =
+      preamble:  ""
+      text:      ""
+      options:   "Options:"
+      arguments: "Arguments:"
+      commands:  "Commands:"
+
+    @startSectionType 'preamble'
+
+
+  startSection: (type, header) ->
+    @lastSection = new UsageSection(type, header)
+    @sections.push @lastSection
+
+
+  endSection: ->
+    @lastSection = null
+
+
+  startSectionType: (type) ->
+    return if @lastSection?.type is type
+    return if @lastSection and (type is '*')
+
+    if @lastSection?.type is '*'
+      @lastSection.type = type
+    else
+      @startSection type, @implicitHeaders[type]
+
+
+  add: (sectionType, line) ->
+    if (sectionType is 'text') and (@sections.length == 1) and (@sections[0].lines.length == 0)
+      sectionType = 'preamble'
+    @startSectionType sectionType
+    @lastSection.lines.push line
+
+  filtered: ->
+    result = new Usage()
+    result.sections = (section for section in @sections when !(section.type in ['preamble', 'commands']))
+    return result
+
+  firstPreambleLine: ->
+    @sections[0].lines[0] || ''
+
+  toUsageString: ->
+    usageStrings = (section.toUsageString() for section in @sections)
+    (s for s in usageStrings when s).join("\n")
+
+  @toUsageString = (usages) ->
+    usageStrings = (usage.toUsageString() for usage in usages)
+    (s for s in usageStrings when s).join("\n")
+
+
+
+
 class Syntax
-  constructor: (@handlers, specs=[]) ->
-    @usage     = []
+  constructor: (@handlers, specs=[], @parent=null) ->
+    @usage     = new Usage()
 
     @options   = []
     @arguments = []
     @commands  = {}
     @commandsOrder = []
 
+    @nestingLevel = (if @parent then @parent.commandNestingLevel + 1 else 0)
+
     @shortOptions = {}
     @longOptions  = {}
 
-    @usageFound = no
-    @headerAdded = no
-
-    @implicitHeaders =
-      options:   "Options:"
-      arguments: "Arguments:"
-      commands:  "Commands:"
-
-    @lastSectionType = 'none'
-    @customHeaderAdded = no
-
     if specs
       @add(specs)
-
-
-  addHeader: (header) ->
-    @usage.push "\n#{header}"
-    @lastSectionType = 'any'
-
-  ensureHeaderExists: (sectionType) ->
-    if @lastSectionType is 'any'
-      @lastSectionType = sectionType
-    else if @lastSectionType != sectionType
-      @addHeader @implicitHeaders[sectionType]
-      @lastSectionType = sectionType
 
 
   add: (specs) ->
@@ -239,11 +291,10 @@ class Syntax
         throw new Error("Expected string spec, found #{typeof spec}")
 
       if spec.match(HEADER)
-        @addHeader spec
+        @usage.startSection '*', spec
 
       else if spec.match(USAGE)
-        @usage.unshift "#{spec}"
-        @usageFound = yes
+        @usage.add 'usage', "#{spec}"
 
       else if spec.match(OPTION)
         @options.push (option = Option.parse(spec.trim()))
@@ -254,8 +305,7 @@ class Syntax
         if gotFunction()
           option.func = specs.shift()
 
-        @ensureHeaderExists 'options'
-        @usage.push option.toUsageString()
+        @usage.add 'options', option.toUsageString()
 
       else if !gotArray() and spec.match(ARGUMENT)
         @arguments.push (option = Option.parse(spec.trim()))
@@ -263,24 +313,29 @@ class Syntax
         if gotFunction()
           option.func = specs.shift()
 
-        @ensureHeaderExists 'arguments'
-        @usage.push option.toUsageString()
+        @usage.add 'arguments', option.toUsageString()
 
       else if $ = spec.match COMMAND
-        [name, desc] = $
+        [_, name, desc] = $
+        desc = (desc || '').trim()
 
         unless gotArray()
           throw new Error("Array must follow a command spec: #{JSON.stringify(spec)}")
-        subsyntax = new Syntax(@handlers, specs.shift())
+        subsyntax = new Syntax(@handlers, specs.shift(), this)
 
         @commands[name] = command = new Command(name, desc, subsyntax)
         @commandsOrder.push name
 
-        @ensureHeaderExists 'commands'
-        @usage.push command.toUsageString()
+        if gotFunction()
+          command.func = specs.shift()
+
+        @usage.add 'commands', command.toUsageString()
+
+      else if spec.trim() is ''
+        @usage.endSection()
 
       else if spec.match TEXT
-        @usage.push "\n" + wrapText(spec.trim())
+        @usage.add 'text', "\n" + wrapText(spec.trim())
 
       else
         throw new Error("String spec invalid: #{JSON.stringify(spec)}")
@@ -288,22 +343,28 @@ class Syntax
     return this
 
 
-  toUsageString: -> (line + "\n" for line in @usage).join('')
+  filteredUsages: ->
+    [@usage.filtered()].concat(@parent?.filteredUsages() || [])
+
+  toUsageString: ->
+    Usage.toUsageString([@usage].concat(@parent?.filteredUsages() || []))
 
 
-  parse: (argv) ->
+  parse: (argv, options) ->
     argv = argv.slice(0)
 
     result     = {}
     positional = []
     funcs      = []
+    commands   = []
+    syntax     = this
 
     executeHook = (option, value) =>
       if option.func
         if option.tags.delayfunc
           funcs.push [option.func, option, value]
         else
-          newValue = option.func(value, result, this, option)
+          newValue = option.func(value, result, syntax, option)
           if newValue?
             value = newValue
       return value
@@ -322,7 +383,7 @@ class Syntax
             value.push (subvalue = argv.shift())
             if typeof subvalue is 'undefined'
               throw new CliError("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
-      return option.coerce(value, result, this)
+      return option.coerce(value, result, syntax)
 
     assignValue = (result, option, value) =>
       if option.tags.list
@@ -339,11 +400,11 @@ class Syntax
           positional.push arg
       else if arg is '-'
         positional.push arg
-      else if arg.match(/^--no-/) && (option = @lookupLongOption(arg.slice(5), result)) && option.tags.flag
+      else if arg.match(/^--no-/) && (option = syntax.lookupLongOption(arg.slice(5), result)) && option.tags.flag
         assignValue result, option, false
       else if $ = arg.match(///^  --  ([^=]+)  (?: = (.*) )?  $///)
         [_, name, value] = $
-        if option = @lookupLongOption(name, result)
+        if option = syntax.lookupLongOption(name, result)
           value = processOption(result, arg, option, value)
           value = executeHook(option, value)
           assignValue result, option, value
@@ -355,7 +416,7 @@ class Syntax
           subarg    = remainder[0]
           remainder = remainder.slice(1)
 
-          if option = @lookupShortOption(subarg, result)
+          if option = syntax.lookupShortOption(subarg, result)
             if remainder && option.metavars.length > 0
               value = remainder
               remainder = ''
@@ -369,36 +430,59 @@ class Syntax
               throw new CliError("Unknown short option #{arg}")
             else
               throw new CliError("Unknown short option -#{subarg} in #{arg}")
+
+      else if (positional.length is 0) and (command = syntax.lookupCommand(arg, result))
+        commands.push command
+
+        if key = options.commandKeys[syntax.nestingLevel]
+          result[key] = arg
+
+        syntax = command.syntax
+
       else
         positional.push arg
 
-    for option in @options
+
+    # required command
+
+    if syntax.commandsOrder.length > 0
+      throw new CliError("No #{SUBSUBSUB[syntax.nestingLevel]} specified")
+
+
+    # required, default and other special options
+
+    for option in syntax.allOptions()
       if !result.hasOwnProperty(option.var)
         if option.tags.required
           throw new CliError("Missing required option: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault or option.tags.list
           if option.defaultValue?
-            value = option.coerce(option.defaultValue, result, this)
+            value = option.coerce(option.defaultValue, result, syntax)
           else
             value = null
           value = executeHook(option, value)
           assignValue result, option, value
 
+
+    # positional args
+
+    allArguments = syntax.allArguments()
+
     for arg, index in positional
-      if option = @arguments[index]
-        value = option.coerce(arg, result, this)
+      if option = allArguments[index]
+        value = option.coerce(arg, result, syntax)
         value = executeHook(option, value)
         positional[index] = value
         if option.var
           assignValue result, option, value
 
-    for option, index in @arguments
+    for option, index in allArguments
       if index >= positional.length
         if option.tags.required
           throw new CliError("Missing required argument \##{index + 1}: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault
           if option.defaultValue?
-            value = option.coerce(option.defaultValue, result, this)
+            value = option.coerce(option.defaultValue, result, syntax)
           else
             value = null
           value = executeHook(option, value)
@@ -413,13 +497,22 @@ class Syntax
 
     result.argv = positional
 
+
     for [func, option, value] in funcs
-      func(value, result, this, option)
+      func(value, result, syntax, option)
+
+
+    # run command functions
+    for command in commands
+      command.func?(result)
 
     return result
 
+
   lookupLongOption: (name, result) ->
     unless @longOptions.hasOwnProperty(name)
+      if @parent and (option = @parent.lookupLongOption(name, result))
+        return option
       @handlers.resolveLongOption?(name, result, this)
 
     if @longOptions.hasOwnProperty(name)
@@ -429,12 +522,34 @@ class Syntax
 
   lookupShortOption: (name, result) ->
     unless @shortOptions.hasOwnProperty(name)
+      if @parent and (option = @parent.lookupShortOption(name, result))
+        return option
       @handlers.resolveShortOption?(name, result, this)
 
     if @shortOptions.hasOwnProperty(name)
       @shortOptions[name]
     else
       null
+
+  lookupCommand: (name, result) ->
+    unless @commands.hasOwnProperty(name)
+      if @parent and (command = @parent.lookupCommand(name, result))
+        return command
+      @handlers.resolveCommand?(name, result, this)
+
+    if @commands.hasOwnProperty(name)
+      @commands[name]
+    else
+      null
+
+  allOptions: ->
+    (@parent?.allOptions() || []).concat(@options)
+
+  allArguments: ->
+    (@parent?.allArguments() || []).concat(@arguments)
+
+  allCommands: ->
+    @commandsOrder
 
 
 Option.parse = (spec) ->
@@ -487,13 +602,15 @@ parse = (specs, options={}) ->
     process.stdout.write text.trim() + "\n"
     process.exit 0
 
+  options.commandKeys ?= ['command', 'subcommand', 'subsubcommand', 'subsubsubcommand']
+
   syntax = new Syntax(options.handlers, specs)
   unless syntax.longOptions.help
     syntax.add ["  -h, --help  Display this usage information", (v, o, syntax) ->
       options.help(syntax.toUsageString())]
 
   try
-    syntax.parse(options.argv)
+    syntax.parse(options.argv, options)
   catch e
     if e instanceof CliError
       options.error(e)

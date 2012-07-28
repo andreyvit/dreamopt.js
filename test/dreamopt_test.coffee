@@ -3,6 +3,38 @@ assert = require 'assert'
 dreamopt = require '../lib/dreamopt'
 
 
+GIT_SYNTAX = [
+  "  remote", [
+    "Manage set of tracked repositories."
+    "  add", [
+      "Adds a remote named <name> for the repository at <url>."
+      "Usage: git remote add <name> <url>"
+      "  <name>  name of remote ref"
+      "  <url>  repository url"
+    ]
+    "  rename", [
+      "Rename the remote named <old> to <new>."
+      "Usage: git remote rename <old> <new>"
+      "  <old>  old remote ref name"
+      "  <new>  new remote ref name"
+    ]
+    "  rm", [
+      "Remove the remote named <name>."
+      "Usage: git remote rm <name>"
+      "  <name>  remote ref name"
+    ]
+  ]
+  "  push", [
+    "Update remote refs along with associated objects.",
+    "Usage: git push <repository> <refspec>"
+    "  <repository>  The 'remote' repository that is destination of a push operation."
+    "  <refspec>  Used to specify with what <src> object the <dst> ref is to be updated."
+  ],
+
+  "Global options:"
+]
+
+
 o = (syntax, argv, expected) ->
   expected.argv ||= []
 
@@ -41,15 +73,25 @@ oo = (syntax, argv, errorRegexp) ->
       assert.ok _err.message.match(errorRegexp), "Expected error matching #{errorRegexp}, got error #{_err.message}"
 
 
-ooo = (syntax, expectedUsage) ->
-  it "should display correct usage info", ->
-    _usage = null
-    captureUsage = (usage) ->
-      _usage = usage
+ooo = (syntax, expectedUsage, argv=[]) ->
+  doit = ->
+    it "should display correct usage info", ->
+      _usage = null
+      captureUsage = (usage) ->
+        _usage = usage
+        throw new Error("bail out of captureUsage")
 
-    dreamopt syntax, argv: ['--help'], help: captureUsage
+      try
+        dreamopt syntax, argv: argv.concat(['--help']), help: captureUsage
+      catch e
+        throw e unless e.message is "bail out of captureUsage"
 
-    assert.equal _usage.trim(), expectedUsage.trim(), "Usage mismatch, actual:\n#{_usage.trim()}\n\nExpected:\n#{expectedUsage.trim()}\n"
+      assert.equal _usage.trim(), expectedUsage.trim(), "Usage mismatch, actual:\n#{_usage.trim()}\n\nExpected:\n#{expectedUsage.trim()}\n"
+
+  if argv.length > 0
+    describe "when given #{argv.concat(['--help']).join(' ')}", doit
+  else
+    doit()
 
 
 
@@ -165,5 +207,95 @@ describe 'dreamopt', ->
     o syntax, [],                                 { src: [], argv: [] }
     o syntax, ['--src', 'xxx'],                   { src: ['xxx'], argv: [] }
     o syntax, ['--src', 'xxx', '--src', 'yyy'],   { src: ['xxx', 'yyy'], argv: [] }
+
+
+  describe "with a syntax that has two subcommands", ->
+
+    barHandler = (result) ->
+      result.bbbar = 42
+
+    syntax = [
+      "  foo  Do something", []
+      "  bar  Do something else", [], barHandler
+    ]
+
+    oo syntax, [],                                 /no command specified/i
+    o syntax, ['foo'],                             { argv: [], command: 'foo' }
+    o syntax, ['bar'],                             { argv: [], command: 'bar', bbbar: 42 }
+
+
+  describe "with a syntax that has a subcommand with local options", ->
+
+    syntax = [
+      "  foo  Do something", []
+      "  bar  Do something else", [
+        "  --boz  Enable boz"
+      ],
+
+      "  -v, --verbose  Verbose"
+    ]
+
+    oo syntax, [],                                 /no command specified/i
+    o syntax, ['foo'],                             { argv: [], command: 'foo' }
+    o syntax, ['-v', 'foo'],                       { argv: [], command: 'foo', verbose: yes }
+    o syntax, ['foo', '-v'],                       { argv: [], command: 'foo', verbose: yes }
+    oo syntax, ['foo', '--boz'],                   /unknown long option/i
+    o syntax, ['bar'],                             { argv: [], command: 'bar' }
+    o syntax, ['bar', '--boz'],                    { argv: [], command: 'bar', boz: yes }
+    o syntax, ['-v', 'bar', '--boz'],              { argv: [], command: 'bar', boz: yes, verbose: yes }
+    o syntax, ['bar', '--boz', '-v'],              { argv: [], command: 'bar', boz: yes, verbose: yes }
+
+
+  describe "with a git-style syntax", ->
+    oo GIT_SYNTAX, [],                                 /no command specified/i
+    o GIT_SYNTAX, ['push'],                            { argv: [], command: 'push' }
+
+    ooo GIT_SYNTAX, """
+      Commands:
+        remote                Manage set of tracked repositories.
+        push                  Update remote refs along with associated objects.
+
+      Global options:
+        -h, --help            Display this usage information
+    """
+
+    ooo GIT_SYNTAX, """
+      Update remote refs along with associated objects.
+
+      Usage: git push <repository> <refspec>
+
+      Arguments:
+        <repository>          The 'remote' repository that is destination of a push operation.
+        <refspec>             Used to specify with what <src> object the <dst> ref is to be updated.
+
+      Global options:
+        -h, --help            Display this usage information
+    """, ['push']
+
+    ooo GIT_SYNTAX, """
+      Manage set of tracked repositories.
+
+      Commands:
+        add                   Adds a remote named <name> for the repository at <url>.
+        rename                Rename the remote named <old> to <new>.
+        rm                    Remove the remote named <name>.
+
+      Global options:
+        -h, --help            Display this usage information
+    """, ['remote']
+
+    ooo GIT_SYNTAX, """
+      Adds a remote named <name> for the repository at <url>.
+
+      Usage: git remote add <name> <url>
+
+      Arguments:
+        <name>                name of remote ref
+        <url>                 repository url
+
+      Global options:
+        -h, --help            Display this usage information
+    """, ['remote', 'add']
+
 
 setTimeout (->), 2000

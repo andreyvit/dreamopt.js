@@ -61,6 +61,7 @@ Overview:
 * comprehensive test suite (221 tests so far)
 * returns a simple hash with predicable contents and coerced data types
 * mandatory and optional arguments/options
+* commands, subcommands, subsubcommands, with command-specific options and per-command help/usage
 * default values
 * optional callback functions
 * custom tags and coercion rules
