@@ -47,6 +47,9 @@ DUMMY               = /// \# ///   # make Sublime Text syntax highlighting happy
 OPTION_DESC_DEFAULT = ///  \(  (?: default: | default\s+is | defaults\s+to )  \s+  ([^()]+)  \)  ///i
 
 
+class CliError extends Error
+
+
 DefaultHandlers =
   auto: (value) ->
     return value unless typeof value is 'string'
@@ -58,7 +61,7 @@ DefaultHandlers =
   int: (value) ->
     return value unless typeof value is 'string'
     if isNaN(parseInt(value, 10))
-      throw new Error("Integer value required: #{value}")
+      throw new CliError("Integer value required: #{value}")
     return parseInt(value, 10)
 
   flag: (value, options, optionName, tagValue) ->
@@ -312,13 +315,13 @@ class Syntax
         when 1
           value ?= argv.shift()
           if typeof value is 'undefined'
-            throw new Error("Option #{arg} requires an argument: #{option.leftUsageComponent()}")
+            throw new CliError("Option #{arg} requires an argument: #{option.leftUsageComponent()}")
         else
           value = []
           for metavar, index in option.metavars
             value.push (subvalue = argv.shift())
             if typeof subvalue is 'undefined'
-              throw new Error("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
+              throw new CliError("Option #{arg} requires #{option.metavars.length} arguments: #{option.leftUsageComponent()}")
       return option.coerce(value, result, this)
 
     assignValue = (result, option, value) =>
@@ -345,7 +348,7 @@ class Syntax
           value = executeHook(option, value)
           assignValue result, option, value
         else
-          throw new Error("Unknown long option: #{arg}")
+          throw new CliError("Unknown long option: #{arg}")
       else if arg.match /^-/
         remainder = arg.slice(1)
         while remainder
@@ -363,16 +366,16 @@ class Syntax
             assignValue result, option, value
           else
             if arg == "-#{subarg}"
-              throw new Error("Unknown short option #{arg}")
+              throw new CliError("Unknown short option #{arg}")
             else
-              throw new Error("Unknown short option -#{subarg} in #{arg}")
+              throw new CliError("Unknown short option -#{subarg} in #{arg}")
       else
         positional.push arg
 
     for option in @options
       if !result.hasOwnProperty(option.var)
         if option.tags.required
-          throw new Error("Missing required option: #{option.leftUsageComponent()}")
+          throw new CliError("Missing required option: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault or option.tags.list
           if option.defaultValue?
             value = option.coerce(option.defaultValue, result, this)
@@ -392,7 +395,7 @@ class Syntax
     for option, index in @arguments
       if index >= positional.length
         if option.tags.required
-          throw new Error("Missing required argument \##{index + 1}: #{option.leftUsageComponent()}")
+          throw new CliError("Missing required argument \##{index + 1}: #{option.leftUsageComponent()}")
         if option.defaultValue? or option.tags.fancydefault
           if option.defaultValue?
             value = option.coerce(option.defaultValue, result, this)
@@ -472,27 +475,30 @@ Option.parse = (spec) ->
   new Option(shortOpt || null, longOpt || null, desc.trim(), tags, metavars, defaultValue)
 
 
-printUsage = (usage) ->
-  console.error(usage)
-  process.exit 1
+parse = (specs, options={}) ->
+  options.handlers ?= {}
+  options.argv     ?= process.argv.slice(2)
 
+  options.error    ?= (e) ->
+    process.stderr.write e.message.trim() + "\n"
+    process.exit 10
 
-handleUsage = (printUsage, value, options, syntax) ->
-  printUsage syntax.toUsageString()
+  options.help     ?= (text) ->
+    process.stdout.write text.trim() + "\n"
+    process.exit 0
 
-
-parse = (specs, handlers, argv) ->
-  if !argv? and (handlers instanceof Array)
-    argv = handlers
-    handlers = {}
-  handlers ?= {}
-  argv ?= process.argv.slice(2)
-
-  syntax = new Syntax(handlers, specs)
+  syntax = new Syntax(options.handlers, specs)
   unless syntax.longOptions.help
-    syntax.add ["  -h, --help  Display this usage information", (v, o, s) -> handleUsage(handlers.printUsage ? printUsage, v, o, s)]
+    syntax.add ["  -h, --help  Display this usage information", (v, o, syntax) ->
+      options.help(syntax.toUsageString())]
 
-  syntax.parse(argv)
+  try
+    syntax.parse(options.argv)
+  catch e
+    if e instanceof CliError
+      options.error(e)
+    else
+      throw e
 
 
 module.exports = parse

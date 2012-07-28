@@ -9,7 +9,7 @@ o = (syntax, argv, expected) ->
   describe "when given #{JSON.stringify(argv)}", ->
     _actual = null
     before ->
-      _actual = dreamopt(syntax, argv)
+      _actual = dreamopt(syntax, argv: argv, error: (e) -> throw e)
 
     for own k, v of expected
       do (k, v) ->
@@ -32,7 +32,7 @@ oo = (syntax, argv, errorRegexp) ->
     _err = null
     before ->
       try
-        _actual = dreamopt(syntax, argv)
+        _actual = dreamopt(syntax, argv: argv)
       catch e
         _err = e
 
@@ -47,7 +47,7 @@ ooo = (syntax, expectedUsage) ->
     captureUsage = (usage) ->
       _usage = usage
 
-    dreamopt syntax, { printUsage: captureUsage }, ['--help']
+    dreamopt syntax, argv: ['--help'], help: captureUsage
 
     assert.equal _usage.trim(), expectedUsage.trim(), "Usage mismatch, actual:\n#{_usage.trim()}\n\nExpected:\n#{expectedUsage.trim()}\n"
 

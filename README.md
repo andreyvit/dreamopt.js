@@ -81,15 +81,19 @@ Usage
 
 This module can called with up to three arguments:
 
-    options = require('dreamopt')(spec, [customTags], [argv])
+    options = require('dreamopt')(spec, [options])
 
 where:
 
 * `spec` is a required array of strings
-* `customTags` is an optional hash with custom tag handlers
-* `argv` is an optional array of arguments to use instead of `process.argv.slice(2)`
+* `options` is an optional hash (i.e. a JavaScript object)
 
-If you leave out `customTags` but specify `argv`, you don't need to include an empty argument: `require('dreamopt')(spec, argv)`.
+The following options can be specified:
+
+* `options.argv` is an array of command-line arguments, defaults to `process.argv.slice(2)`
+* `options.customTags` is a hash with custom tag handlers
+* `options.error(err)` is a function that handles syntax error, the default one prints `err.message` and exits
+* `options.help(usage)` is a function that handles `--help`, the default one prints `usage` and exits
 
 
 Specification format
@@ -175,4 +179,4 @@ If you don't define a `--help` option, it is provided for you automatically and 
           --reporters       Print a list of reporters and exit
       -h, --help            Display this usage information
 
-You can provide `customTags.printUsage(usageText)` function to customize the way this usage info is printed; the default implementation outputs the argument via `console.error` and executes `process.exit(1)`.
+You can provide `options.help(usageText)` function to customize the way this usage info is printed; the default implementation outputs the argument via `process.stdout.write` and executes `process.exit(0)`.
