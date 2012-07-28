@@ -327,6 +327,8 @@ class Syntax
         [_, name, desc] = $
         desc = (desc || '').trim()
 
+        func = if gotFunction() then specs.shift() else null
+
         if gotArray()
           subspecs = specs.shift()
         else if (subspecs = options.loadCommandSyntax?(@parentContexts.concat([name]).join(' ')))
@@ -336,11 +338,10 @@ class Syntax
         subsyntax = new Syntax(@handlers, [], this, name)
         subsyntax.add(subspecs, options)
 
-        @commands[name] = command = new Command(name, desc, subsyntax)
+        command = new Command(name, desc, subsyntax)
+        command.func = func
+        @commands[name] = command
         @commandsOrder.push name
-
-        if gotFunction()
-          command.func = specs.shift()
 
         @usage.add 'commands', command.toUsageString()
 

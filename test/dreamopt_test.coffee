@@ -216,7 +216,7 @@ describe 'dreamopt', ->
 
     syntax = [
       "  foo  Do something", []
-      "  bar  Do something else", [], barHandler
+      "  bar  Do something else", barHandler, []
     ]
 
     oo syntax, [],                                 /no command specified/i
