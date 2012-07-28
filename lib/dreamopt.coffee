@@ -264,13 +264,18 @@ class Usage
 
 
 class Syntax
-  constructor: (@handlers, specs=[], @parent=null) ->
+  constructor: (@handlers, specs=[], @parent=null, @parentContext='') ->
     @usage     = new Usage()
 
     @options   = []
     @arguments = []
     @commands  = {}
     @commandsOrder = []
+
+    if @parent
+      @parentContexts = [@parentContext].concat(@parent.parentContexts)
+    else
+      @parentContexts = []
 
     @nestingLevel = (if @parent then @parent.nestingLevel + 1 else 0)
 
@@ -281,7 +286,7 @@ class Syntax
       @add(specs)
 
 
-  add: (specs) ->
+  add: (specs, options={}) ->
     unless typeof specs is 'object'
       specs = [specs]
     specs = specs.slice(0)
@@ -322,9 +327,14 @@ class Syntax
         [_, name, desc] = $
         desc = (desc || '').trim()
 
-        unless gotArray()
+        if gotArray()
+          subspecs = specs.shift()
+        else if (subspecs = options.loadCommandSyntax?(@parentContexts.concat([name]).join(' ')))
+          # cool
+        else
           throw new Error("Array must follow a command spec: #{JSON.stringify(spec)}")
-        subsyntax = new Syntax(@handlers, specs.shift(), this)
+        subsyntax = new Syntax(@handlers, [], this, name)
+        subsyntax.add(subspecs, options)
 
         @commands[name] = command = new Command(name, desc, subsyntax)
         @commandsOrder.push name
@@ -439,6 +449,8 @@ class Syntax
 
         if key = options.commandKeys[syntax.nestingLevel]
           result[key] = arg
+        if key = options.compoundCommandKey
+          result[key] = (c.name for c in commands).join(' ')
 
         syntax = command.syntax
 
@@ -609,8 +621,11 @@ parse = (specs, options={}) ->
     process.exit 0
 
   options.commandKeys ?= ['command', 'subcommand', 'subsubcommand', 'subsubsubcommand']
+  options.compoundCommandKey = null
 
-  syntax = new Syntax(options.handlers, specs)
+  syntax = new Syntax(options.handlers)
+  syntax.add(specs, options)
+
   unless syntax.longOptions.help
     syntax.add ["  -h, --help  Display this usage information", (v, o, syntax) ->
       options.help(syntax.toUsageString())]
