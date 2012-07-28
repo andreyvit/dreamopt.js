@@ -480,7 +480,7 @@ parse = (specs, options={}) ->
   options.argv     ?= process.argv.slice(2)
 
   options.error    ?= (e) ->
-    process.stderr.write e.message.trim() + "\n"
+    process.stderr.write "#{e.message.trim()}. Run with --help for help.\n"
     process.exit 10
 
   options.help     ?= (text) ->
