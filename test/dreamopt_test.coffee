@@ -61,6 +61,7 @@ describe 'dreamopt', ->
         "  -a, --AAA  Simple option"
         "  -b, --BBB COUNT  Option with value"
         "  -c, --[no-]ccc  Flag option"
+        "  -d, --ddd <value>  Another option with value"
     ]
 
     o syntax, [''], {}
@@ -94,6 +95,7 @@ describe 'dreamopt', ->
         -a, --AAA             Simple option
         -b, --BBB COUNT       Option with value
         -c, --[no-]ccc        Flag option
+        -d, --ddd <value>     Another option with value
         -h, --help            Display this usage information
     """
 
@@ -102,8 +104,8 @@ describe 'dreamopt', ->
 
     syntax = [
         "  -v, --verbose  Be verbose"
-        "  first  First positional arg"
-        "  second  Second positional arg"
+        "  <first>  First positional arg"
+        "  <second>  Second positional arg"
     ]
 
     o syntax, [],                      {}
@@ -118,8 +120,8 @@ describe 'dreamopt', ->
   describe "with a syntax that has two positional arguments, both of which have default values", ->
 
     syntax = [
-        "  first  First positional arg (default: 10)"
-        "  second  Second positional arg (default: 20)"
+        "  FIRST  First positional arg (default: 10)"
+        "  SECOND  Second positional arg (default: 20)"
     ]
 
     o syntax, [],                      { argv: [10, 20], first: 10, second: 20 }
@@ -130,8 +132,8 @@ describe 'dreamopt', ->
   describe "with a syntax that has two positional arguments, one of which is required", ->
 
     syntax = [
-        "  first  First positional arg  #required"
-        "  second  Second positional arg (default: 20)"
+        "  <first>  First positional arg  #required"
+        "  <second>  Second positional arg (default: 20)"
     ]
 
     oo syntax, [],                     /required/
@@ -143,7 +145,7 @@ describe 'dreamopt', ->
 
     syntax = [
         "  --src FILE  Source file  #required"
-        "  first  First positional arg"
+        "  <first>  First positional arg"
     ]
 
     oo syntax, [],                     /required/

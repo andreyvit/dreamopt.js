@@ -4,10 +4,10 @@ Command-Line Parser With Readable Syntax From Your Sweetest Dreams
 Ever wrote crap code to deal with parsing command-line options? No more. Here's how it should look like (in CoffeeScript):
 
     options = require('dreamopt') [
-      "Usage: myscript [options] source [destination]"
+      "Usage: myscript [options] <source> [<destination>]"
 
-      "  source           Source file to compile into css #required"
-      "  destination      Destination file (defaults to source file with .css extension)", (value, options) ->
+      "  <source>           Source file to compile into css #required"
+      "  <destination>      Destination file (defaults to source file with .css extension)", (value, options) ->
         if !value
           return options.source.replace(/\.mess/, '') + '.css'
 
@@ -157,11 +157,11 @@ Automatic usage info
 
 If you don't define a `--help` option, it is provided for you automatically and prints a usage info like this:
 
-    Usage: myscript [options] source.mess [destination.css]
+    Usage: myscript [options] <source.mess> [<destination.css>]
 
     Arguments:
-      source                Source file to compile into css
-      destination           Destination file (defaults to source file with .css extension)
+      <source>              Source file to compile into css
+      <destination>         Destination file (defaults to source file with .css extension)
 
     Processing options:
       -n, --dry-run         Don't write anything to disk

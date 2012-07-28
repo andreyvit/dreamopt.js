@@ -4,12 +4,41 @@ USAGE    = /^Usage:/
 HEADER   = /^[^-].*:$/
 OPTION   = /^\s+-/
 COMMAND  = ///^  \s+  (\w+)  (?: \s{2,} (\S.*) )  $///
-ARGUMENT = /// ^ \s+ .* \s\s | ^ \s+ \S+ $ ///
 TEXT     = /^\S/
+
+ARGUMENT = ///
+    ^\s+                                     # starts with at least one space
+    (?:                                      # metavar:
+        [A-Z._-][A-Z0-9._-]+                   # either an uppercase word
+      |
+        <
+          [^\s>]+                              # or pretty much anything inside angular brackets
+        >
+    )
+    (?: \s\s | $ )                           # ends with two spaces or end of line
+  ///
 
 # if only JavaScript had a sane split(), we'd skip some of these
 OPTION_DESC         = ///^ (.*?)  \s{2,}  (.*) $///
-OPTION_METAVARS     = ///^ ([^\s,]+ (?:,\s* \S+)? )  \s+  ([^,].*) $///
+OPTION_METAVARS     = ///^
+    (                                        # group 1: options
+      [^\s,]+                                  # a WORD like -f or --foo
+      (?:
+        ,\s* \S+                               # maybe followed by a comma and another word like --foo
+      )?
+    )
+    (                                        # group 2: space-separated metavars
+      (?:
+        \s
+        (?:                                    # metavar:
+            [A-Z._-][A-Z0-9._-]+                 # either an uppercase word
+          |
+            <
+              [^\s>]+                            # or pretty much anything inside angular brackets
+            >
+        )
+      )*
+    ) $///
 OPTION_SHORT        = ///^ (-\S)  (?: , \s* (.*) )? $///
 OPTION_LONG         = ///^ (--\S+) $///
 OPTION_BOOL         = ///^ --\[no-\](.*) $///
@@ -67,6 +96,25 @@ formatUsageString = (left, right) ->
   return "  #{left}#{padding}  #{right}"
 
 
+cleanUpMetaVarName = (name) ->
+  if $ = name.match ///^ < (.*) > $///
+    $[1]
+  else
+    name
+
+formatMetaVar = (metavar) ->
+  if metavar == metavar.toUpperCase()
+    metavar
+  else
+    "<#{metavar}>"
+
+cleanUpNameForUsingAsVarName = (name, isOption) ->
+  unless isOption
+    if name == name.toUpperCase()
+      name = name.toLowerCase()
+  name
+
+
 class Option
   constructor: (@shortOpt, @longOpt, @desc, tagPairs, @metavars, @defaultValue) ->
     if @longOpt || @shortOpt
@@ -75,8 +123,11 @@ class Option
       @name = @metavars[0]
       if $ = @name.match ///^ \[ (.*) \] $///
         @name = $[1]
+      @name = cleanUpMetaVarName(@name)
 
-    @var = @name
+    @metavars = (cleanUpMetaVarName(name) for name in @metavars)
+
+    @var = cleanUpNameForUsingAsVarName(@name, @longOpt || @shortOpt)
 
     @tags = {}
     @tagsOrder = []
@@ -103,7 +154,7 @@ class Option
       else ''
 
     if @metavars
-      string = string + (string && ' ' || '') + @metavars.join(' ')
+      string = string + (string && ' ' || '') + (formatMetaVar(mv) for mv in @metavars).join(' ')
 
     return string
 
@@ -393,7 +444,7 @@ Option.parse = (spec) ->
     [_, longOpt, options]  = (options || '').match(OPTION_LONG)  || [undefined, "", options]
   else
     [metavars, options] = [options, ""]
-  metavars = metavars && metavars.split(/\s+/) || []
+  metavars = metavars && metavars.trim() && metavars.trim().split(/\s+/) || []
 
   tags = (([_, desc, tag, value] = $; [tag, value ? true]) while $ = desc.match(OPTION_DESC_TAG))
   tags.reverse()

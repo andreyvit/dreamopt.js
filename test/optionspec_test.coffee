@@ -22,14 +22,21 @@ describe 'dreamopt.parseOptionSpec', ->
     o "--code", shortOpt: null, longOpt: '--code', desc: "", tags: { flag: yes }, metavars: []
     o "-c, --code", shortOpt: '-c', longOpt: '--code', desc: "", tags: { flag: yes }, metavars: []
 
-  describe "metavar", ->
+  describe "uppercase metavar", ->
     o "-c FILE", shortOpt: '-c', longOpt: null, desc: "", tags: {}, metavars: ['FILE']
     o "--code FILE", shortOpt: null, longOpt: '--code', desc: "", tags: {}, metavars: ['FILE']
     o "-c, --code FILE", shortOpt: '-c', longOpt: '--code', desc: "", tags: {}, metavars: ['FILE']
 
+  describe "angular-bracketed metavar", ->
+    o "-c <file>", shortOpt: '-c', longOpt: null, desc: "", tags: {}, metavars: ['file']
+    o "--code <file>", shortOpt: null, longOpt: '--code', desc: "", tags: {}, metavars: ['file']
+    o "-c, --code <file>", shortOpt: '-c', longOpt: '--code', desc: "", tags: {}, metavars: ['file']
+
   describe "two metavars", ->
     o "-c SRC DST", shortOpt: '-c', longOpt: null, desc: "", tags: {}, metavars: ['SRC','DST']
     o "--code SRC DST", shortOpt: null, longOpt: '--code', desc: "", tags: {}, metavars: ['SRC','DST']
+    o "--code SRC <dst>", shortOpt: null, longOpt: '--code', desc: "", tags: {}, metavars: ['SRC','dst']
+    o "--code <src> <dst>", shortOpt: null, longOpt: '--code', desc: "", tags: {}, metavars: ['src','dst']
     o "-c, --code SRC DST", shortOpt: '-c', longOpt: '--code', desc: "", tags: {}, metavars: ['SRC','DST']
 
   describe "description", ->
@@ -61,7 +68,8 @@ describe 'dreamopt.parseOptionSpec', ->
     o "--widgets COUNT  Produce some codez #default(10)", desc: "Produce some codez", defaultValue: "10", tags: { default: '10' }
 
   describe "positional argument", ->
-    o "srcfile  Source file", shortOpt: null, longOpt: null, desc: "Source file", tags: {}, metavars: ['srcfile']
+    o "SRCFILE  Source file", shortOpt: null, longOpt: null, desc: "Source file", tags: {}, metavars: ['SRCFILE']
+    o "<srcfile>  Source file", shortOpt: null, longOpt: null, desc: "Source file", tags: {}, metavars: ['srcfile']
 
   describe "flag option", ->
     o "--[no-]code", shortOpt: null, longOpt: '--code', desc: "", tags: { flag: yes, acceptsno: yes }, metavars: []
