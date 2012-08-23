@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/andreyvit/dreamopt.js.png)](http://travis-ci.org/andreyvit/dreamopt.js)
 Command-Line Parser With Readable Syntax From Your Sweetest Dreams
 ==================================================================
 
