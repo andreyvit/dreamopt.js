@@ -1,6 +1,8 @@
 Command-Line Parser With Readable Syntax From Your Sweetest Dreams
 ==================================================================
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/andreyvit/dreamopt.js.svg)](https://greenkeeper.io/)
+
 Ever wrote crap code to deal with parsing command-line options? No more. Here's how it should look like (in CoffeeScript):
 
     options = require('dreamopt') [
